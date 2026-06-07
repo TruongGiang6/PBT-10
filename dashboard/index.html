@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div>
+                <h1><i class="fa-solid fa-chart-pie"></i> Tổng quan Dữ liệu</h1>
+                <p id="timeDisplay" class="time-display">Data loaded in 0 ms</p>
+            </div>
+            <button id="refreshBtn" class="refresh-btn">
+                <i class="fa-solid fa-rotate-right"></i> Refresh All
+            </button>
+        </header>
+
+        <div class="widgets-grid">
+            <div class="widget" id="widget-0">
+                <div class="widget-header">
+                    <h2><i class="fa-solid fa-user"></i> Người dùng ngẫu nhiên</h2>
+                </div>
+                <div class="widget-content" id="content-0"></div>
+            </div>
+
+            <div class="widget" id="widget-1">
+                <div class="widget-header">
+                    <h2><i class="fa-solid fa-dog"></i> Hình ảnh Cún</h2>
+                </div>
+                <div class="widget-content" id="content-1"></div>
+            </div>
+
+            <div class="widget" id="widget-2">
+                <div class="widget-header">
+                    <h2><i class="fa-solid fa-cloud-sun"></i> Thời tiết (Hà Nội)</h2>
+                </div>
+                <div class="widget-content" id="content-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
