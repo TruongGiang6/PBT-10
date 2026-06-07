@@ -139,3 +139,103 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3) {
     }
 }
 ```
+
+## Câu C2:
+
+**Giải thích sự khác nhau. Cho ví dụ thực tế khi nào dùng mỗi cái:**
+
+| Method           | Khi nào resolve?                   | Khi nào reject?            | Use case |
+|--------          |------------------                  |------------------          |----------|
+| `.all()`         | TẤT CẢ cùng thành công      |Ngay khi 1 cái thất bại            | Tải đủ bộ dữ liệu cốt lõi để mở trang        |
+| `.allSettled()`  | TẤT CẢ đều đã chạy xong      | KHÔNG BAO GIỜ thất bại           | Tải các Widget độc lập trên Dashboard |
+| `.race()`        | Thằng đầu tiên thành công   | Thằng đầu tiên thất bại           | Làm bộ đếm ngắt giờ (Timeout) cho API |
+| `.any()`         | Thằng đầu tiên thành công   | Chỉ khi TẤT CẢ thất bại           | Tải file từ các Server dự phòng (CDN) |
+
+**Viết ví dụ code cho mỗi method với scenario thực tế (không phải ví dụ `delay` đơn giản)**
+```js
+// Scenario: Phải tải đủ cấu hình ứng dụng, giỏ hàng và thông tin user thì mới render giao diện.
+const fetchUser = () => fetch("/api/user").then(r => r.json());
+const fetchCart = () => fetch("/api/cart").then(r => r.json());
+const fetchTheme = () => fetch("/api/theme-config").then(r => r.json());
+//Gom đủ dữ liệu để mở trang Dashboard
+async function initApplication() {
+    try {
+        // Chạy song song cả 3. Chỉ cần API /api/cart lỗi 500, lập tức nhảy xuống khối catch.
+        const [user, cart, theme] = await Promise.all([
+            fetchUser(),
+            fetchCart(),
+            fetchTheme()
+        ]);
+        
+        console.log("Đủ data, tiến hành vẽ UI cho user:", user.name);
+        renderPage(user, cart, theme);
+    } catch (error) {
+        console.error("Ứng dụng không thể khởi tạo do thiếu dữ liệu cốt lõi:", error.message);
+        showSystemErrorPage(); // Hiện màn hình lỗi hệ thống toàn cục
+    }
+}
+//Tải danh sách file đính kèm
+// Scenario: User tải lên 3 file ảnh cùng lúc. File nào lỗi thì báo lỗi đỏ, file nào thành công thì hiện nút xem.
+const uploadFile = (file) => fetch("/api/upload", { method: "POST", body: file }).then(r => r.json());
+
+async function handleBulkUpload(filesArray) {
+    // Luôn luôn resolve về một mảng chứa kết quả của cả 3 tiến trình
+    const uploadStatuses = await Promise.allSettled(filesArray.map(file => uploadFile(file)));
+
+    uploadStatuses.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+            console.log(`File thứ ${index + 1} tải lên THÀNH CÔNG:`, result.value.url);
+            showSuccessTickInUI(index);
+        } else {
+            console.warn(`File thứ ${index + 1} tải lên THẤT BẠI. Lý do:`, result.reason);
+            showErrorCrossInUI(index, result.reason);
+        }
+    });
+}
+//Tạo cơ chế Timeout cho API thanh toán
+// Scenario: Khi bấm thanh toán, nếu API xử lý quá 5 giây mà chưa xong, hủy bỏ và báo lỗi timeout cho khách hàng.
+const requestCheckout = (cartId) => fetch("/api/checkout", { method: "POST", body: cartId }).then(r => r.json());
+
+const timeoutGuard = (ms) => new Promise((_, reject) => 
+    setTimeout(() => reject(new Error("Cổng thanh toán phản hồi quá chậm!")), ms)
+);
+
+async function processPayment(cartId) {
+    try {
+        // Cuộc đua giữa API mạng và Bộ đếm ngược 5000ms
+        const paymentResult = await Promise.race([
+            requestCheckout(cartId),
+            timeoutGuard(5000)
+        ]);
+        
+        alert("Thanh toán đơn hàng thành công!");
+    } catch (error) {
+        // Nếu bộ đếm ngược về trước, error.message sẽ là "Cổng thanh toán phản hồi quá chậm!"
+        alert(`Giao dịch thất bại: ${error.message}`);
+    }
+}
+//Lấy ảnh từ các Server CDN dự phòng
+// Scenario: Cần load một bức ảnh Banner lớn. Gọi đồng thời lên 3 cụm Server CDN khác nhau trên thế giới. 
+// Server nào gần user và phản hồi về ảnh thành công trước thì lấy ngay, bất chấp các server kia bị lỗi hay chậm.
+const getImgFromSingapore = () => fetch("https://sg.cdn.com/banner.jpg").then(r => r.blob());
+const getImgFromUSA = () => fetch("https://us.cdn.com/banner.jpg").then(r => r.blob());
+const getImgFromJapan = () => fetch("https://jp.cdn.com/banner.jpg").then(r => r.blob());
+
+async function loadBanner() {
+    try {
+        // Chỉ cần 1 cụm CDN trả về blob ảnh thành công trước, biến bannerBlob sẽ nhận giá trị luôn.
+        const bannerBlob = await Promise.any([
+            getImgFromSingapore(),
+            getImgFromJapan(),
+            getImgFromUSA()
+        ]);
+        
+        displayBanner(bannerBlob);
+    } catch (aggregateError) {
+        // Chỉ lọt vào đây nếu CẢ 3 SERVER CDN ĐỀU SẬP hoàn toàn.
+        console.error("Tất cả các server dự phòng đều không thể kết nối:", aggregateError.errors);
+        displayFallbackLocalBanner();
+    }
+}
+```
+
