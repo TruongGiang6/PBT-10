@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management CRUD</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Quản lý Người dùng</h1>
+            <div class="search-box">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên hoặc email...">
+            </div>
+        </header>
+
+        <section class="form-section">
+            <h2 id="formTitle">Thêm người dùng mới</h2>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <input type="text" id="name" placeholder="Họ và tên" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="email" placeholder="Địa chỉ Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="phone" placeholder="Số điện thoại" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="submitBtn" class="btn-primary">Tạo mới</button>
+                    <button type="button" id="cancelBtn" class="btn-secondary" style="display: none;">Hủy</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="list-section">
+            <div id="userGrid" class="user-grid">
+                </div>
+        </section>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
