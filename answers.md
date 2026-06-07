@@ -31,3 +31,58 @@
 + Network error (Lỗi mạng): Mất mạng, server từ chối kết nối, hoặc lỗi CORS. Lúc này bản thân hàm fetch() sẽ thất bại và ném ra lỗi
 + Lỗi 404 / 500: Theo mặc định, fetch không coi 404/500 là lỗi mạng (nó vẫn gọi là request thành công vì server có trả lời). Tuy nhiên, đoạn code if (!response.ok) throw new Error(...) của bạn đã chủ động "dịch" các mã này thành một lỗi hệ thống và ném nó xuống catch
 + JSON parse error: Nếu server trả lời bằng văn bản HTML hoặc một chuỗi bị lỗi thay vì JSON chuẩn, hàm response.json() sẽ không phân tích được và ném ra lỗi SyntaxError, khối catch cũng sẽ tóm được lỗi này
+
+## Câu A3:
+
+1. Sơ đồ 3 trạng thái của Promise (`Pending → Fulfilled`, `Pending → Rejected`)
+
+```text
+┌─── [Resolved] ───► FULFILLED (Thành công) ───► .then()
+                     │                      (Trả về: value)
+                     │
+PENDING (Chờ xử lý) ─┤
+                     │
+                     │
+                     └─── [Rejected] ───► REJECTED (Thất bại) ──────► .catch()
+                                            (Trả về: error/reason)
+```
+
+2. Giải thích: Callback Hell là gì? Viết ví dụ 4 cấp callback hell → Refactor thành async/await:
+- Callback Hell là tình trạng các hàm callback lồng vào nhau quá sâu (tạo thành hình kim tự tháp) khi xử lý tuần tự nhiều tác vụ bất đồng bộ. Hậu quả: Code cực kỳ rối, khó bảo trì và logic xử lý lỗi bị lặp lại ở mọi cấp
+- Ví dụ 4 cấp Callback Hell:
+```js
+getUser(1, (err, user) => {
+    if (err) return console.error(err);
+    
+    getPosts(user.id, (err, posts) => {
+        if (err) return console.error(err);
+        
+        getComments(posts[0].id, (err, comments) => {
+            if (err) return console.error(err);
+            
+            sendEmail(user.email, comments, (err, res) => {
+                if (err) return console.error(err);
+                console.log("Xong!", res);
+            });
+        });
+    });
+});
+```
+- Refactor bằng Async/Await:
+```js
+async function processUserWorkflow(userId) {
+    try {
+        const user = await getUser(userId);
+        const posts = await getPosts(user.id);
+        const comments = await getComments(posts[0].id);
+        const res = await sendEmail(user.email, comments);
+        
+        console.log("Xong!", res);
+    } catch (err) {
+        // Gom toàn bộ việc xử lý lỗi vào một chỗ duy nhất
+        console.error("Có lỗi xảy ra:", err);
+    }
+}
+
+processUserWorkflow(1);
+```
