@@ -86,3 +86,56 @@ async function processUserWorkflow(userId) {
 
 processUserWorkflow(1);
 ```
+## PHẦN C:
+
+## Câu C1:
+
+**Bạn xây dựng app E-Commerce gọi nhiều APIs. Thiết kế chiến lược xử lý lỗi:**
+
+1. Network errors (mất mạng giữa chừng) → Xử lý thế nào?: fetch() tự quăng lỗi. Dùng catch để hiện thông báo "Mất kết nối", lưu tác vụ vào giỏ hàng (LocalStorage) chờ có mạng gửi lại
+
+2. API errors (server trả 500, 404, 429 Too Many Requests):
+- Lỗi 404 (Not Found): Không thử lại (Retry). Hiển thị trang/thông báo "Không tìm thấy sản phẩm"
+- Lỗi 500 (Server Error) & 429 (Spam/Quá tải): Kích hoạt Retry (thử lại) kèm độ trễ tăng dần để server kịp thở
+
+3. Timeout (API chậm > 10 giây) → Viết code fetchWithTimeout(url, ms)
+```js
+async function fetchWithTimeout(url, options = {}, ms = 10000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+
+    try {
+        const res = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(timer);
+        return res;
+    } catch (err) {
+        clearTimeout(timer);
+        if (err.name === 'AbortError') throw new Error("Timeout: API phản hồi quá chậm!");
+        throw err;
+    }
+}
+```
+
+4. Retry logic (thử lại 3 lần nếu lỗi network) → Viết code fetchWithRetry(url, maxRetries)
+```js
+async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+    for (let i = 1; i <= maxRetries; i++) {
+        try {
+            const res = await fetchWithTimeout(url, options, 10000);
+            
+            // Nếu lỗi 5xx hoặc 429 -> Cố tình ném lỗi để nhảy xuống catch và Retry
+            if (!res.ok && (res.status >= 500 || res.status === 429)) {
+                throw new Error(`Lỗi server: ${res.status}`);
+            }
+            
+            return res; // Thành công (2xx) hoặc lỗi Client (4xx) thì trả về luôn
+            
+        } catch (err) {
+            if (i === maxRetries) throw new Error("Thất bại sau 3 lần thử: Lỗi mạng hoặc Server sập.");
+            
+            // Chờ 1s, 2s... trước khi thử lại (Exponential Backoff)
+            await new Promise(resolve => setTimeout(resolve, i * 1000));
+        }
+    }
+}
+```
